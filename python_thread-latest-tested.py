@@ -55,97 +55,7 @@ class RZFile(threading.Thread):
 		except Exception:
 			logging.debug("Transfer file failed")
 			return
-#-----------------------------------------------------------------------
-#  Convert a integer "0x" to '\x'
-#-----------------------------------------------------------------------
-def convert_to_hex(arg):
-	res = struct.pack('>B',arg)
-	return res
-#------------------------------------------------------------------------
-#  Function Name: crc_generate
-#  Description: generate the checksum 
-#------------------------------------------------------------------------
-def crc_generate(mesg_pack=[]):
-	warnings.simplefilter("ignore")
-	crc = 0
-	#print "passed",mesg_pack
-	for mesg in mesg_pack[1:]:
-		crc += int(struct.unpack('>B',mesg)[0])
-	crc = (~crc & (2**8 -1)) + 1
-	try:
-		crc =  struct.pack('>B',crc)
-		return crc
-	except:
-		return crc
-	# Because when pack crc, there may be overflow leading to DeprecationWarning, just ignore it
-with warnings.catch_warnings():
-	warnings.simplefilter("ignore")
-#------------------------------------------------------------------------
-#  Function Name: crc_check
-#  Parameters: Receieved message
-#  Author: Daniel Chai
-#  Modified Date: 9/26/2012
-#  Description: Check the correction of the message
-#------------------------------------------------------------------------
-def crc_check(mesg_pack=[]):
-	crc = 0
-	crc = crc_generate(mesg_pack[0:-1])
-	if crc == mesg_pack[-1]:
-		return True
-	else:
-		return False
-#------------------------------------------------------------------------
-#  Function Name: generate_resp_pack
-#  Description: according the orignal message package and
-#               return value to generate a respond message
-#------------------------------------------------------------------------
-def generate_resp_pack(mesg_pack=[],argsize=0,args=[]):
-	if DEBUG:
-		print "received par mesg_pack in generate",mesg_pack
-	mesg_pack[1] = struct.pack('>B',DEV_ID)
-	mesg_pack[3] = chr(ord(mesg_pack[3]) +1 )
-	temp = mesg_pack[1]
-	mesg_pack[1] = mesg_pack[2]
-	mesg_pack[2] = temp
-	mesg_pack.append(convert_to_hex(argsize))
-	if argsize == 0:
-		crc = crc_generate(mesg_pack)
-		mesg_pack.append(crc)
-		return mesg_pack
-	else:
-		if argsize != len(args):
-			mesg_pack[4] = chr(0x15)
-			mesg_pack[5] = chr(0x00)
-			crc = crc_generate(mesg_pack)
-			mesg_pack.append(crc)
-			return mesg_pack
- 		for arg in args:
-			mesg_pack.append(arg)
-		crc = crc_generate(mesg_pack)
-		mesg_pack.append(crc)
-		if DEBUG:
-			print "Final generated mesg_pack",mesg_pack
-		return mesg_pack
-#------------------------------------------------------------------------
-#  Function Name: send_resp(resp_pack_mesg)
-#------------------------------------------------------------------------
-def send_resp(mesg_pack=[],argsize=0,args=[]):
-	resp_mesg_pack = generate_resp_pack(mesg_pack,argsize,args)
-	logging.debug("send_resp send back:%s",resp_mesg_pack)
-	try:
-		#ser = serial_thread_que.get()
-		ser = serial.Serial(port = None,baudrate = 9600,parity = serial.PARITY_NONE,
-							stopbits = serial.STOPBITS_ONE,bytesize = serial.EIGHTBITS)
-		ser.port = '/dev/ttyS3'
-		if not ser.isOpen():
-			ser.open()
-		ser.flushOutput()
-		# convert the list to string to send
-		ser.write(''.join(resp_mesg_pack))
-	except serial.SerialTimeoutException:
-		logging.debug("send_resp SerialException")
-		raise
-		return
+
 #-----------------------------------------------------------------------------
 #  iSIC CMD 0x01	Function Name: exe_cmd_id
 #  Description: get the infomation from database about the board
@@ -166,7 +76,7 @@ def exe_cmd_id(mesg_pack):
 		result_list.append(firmware)
 	result_list.append(struct.pack('>B',hardware))
 	result_list.append(chr(0x0))
-	if DEBUG:
+	if DEBUG == True:
 		print "mesg_pack cmd01",mesg_pack,"The result list",result_list
 	send_resp(mesg_pack[:5],6,result_list)
 	return 
@@ -196,6 +106,7 @@ def exe_cmd_ad(mesg_pack):
 		result_list.append(ad)
 	send_resp(mesg_pack[:5],2,result_list)
 	return
+
 #-----------------------------------------------------------------------
 #  Function Name: exe_cmd_temp
 #  Description: get the board temperature
@@ -384,6 +295,101 @@ def exe_cmd_pass_through(mesg_pack):
 		result_list.append(chr(0xf1))
 		send_resp(mesg_pack[:5],1,result_list)
 		return
+#-----------------------------------------------------------------------
+#  Convert a integer "0x" to '\x'
+#-----------------------------------------------------------------------
+def convert_to_hex(arg):
+	res = struct.pack('>B',arg)
+	return res
+	
+#------------------------------------------------------------------------
+#  Function Name: crc_generate
+#  Description: generate the checksum 
+#------------------------------------------------------------------------
+def crc_generate(mesg_pack=[]):
+	warnings.simplefilter("ignore")
+	crc = 0
+	#print "passed",mesg_pack
+	for mesg in mesg_pack[1:]:
+		#crc  += ord(mesg)
+		crc += int(struct.unpack('>B',mesg)[0])
+	crc = (~crc & (2**8 -1)) + 1
+	try:
+		crc =  struct.pack('>B',crc)
+		return crc
+	except:
+		return crc
+# Because when pack crc, there may be overflow leading to DeprecationWarning, just ignore it
+with warnings.catch_warnings():
+	warnings.simplefilter("ignore")
+#------------------------------------------------------------------------
+#  Function Name: crc_check
+#  Parameters: Receieved message
+#  Author: Daniel Chai
+#  Modified Date: 9/26/2012
+#  Description: Check the correction of the message
+#------------------------------------------------------------------------
+def crc_check(mesg_pack=[]):
+	crc = 0
+	crc = crc_generate(mesg_pack[0:-1])
+	if crc == mesg_pack[-1]:
+		return True
+	else:
+		return False	
+#------------------------------------------------------------------------
+#  Function Name: send_resp(resp_pack_mesg)
+#------------------------------------------------------------------------
+def send_resp(mesg_pack=[],argsize=0,args=[]):
+	resp_mesg_pack = generate_resp_pack(mesg_pack,argsize,args)
+	logging.debug("send_resp send back:%s",resp_mesg_pack)
+	try:
+		#ser = serial_thread_que.get()
+		ser = serial.Serial(port = None,baudrate = 9600,parity = serial.PARITY_NONE,
+							stopbits = serial.STOPBITS_ONE,bytesize = serial.EIGHTBITS)
+		ser.port = '/dev/ttyS3'
+		if ser.isOpen() == False:
+			ser.open()
+		ser.flushOutput()
+		# convert the list to string to send
+		ser.write(''.join(resp_mesg_pack))
+		#ser = serial_thread_que.put(ser)
+	except serial.SerialTimeoutException:
+		logging.debug("send_resp SerialException")
+		#ser = serial_thread_que.put(ser)
+		raise
+		return
+#------------------------------------------------------------------------
+#  Function Name: generate_resp_pack
+#  Description: according the orignal message package and
+#               return value to generate a respond message
+#------------------------------------------------------------------------
+def generate_resp_pack(mesg_pack=[],argsize=0,args=[]):
+	if DEBUG == True:
+		print "received par mesg_pack in generate",mesg_pack
+	mesg_pack[1] = struct.pack('>B',DEV_ID)
+	mesg_pack[3] = chr(ord(mesg_pack[3]) +1 )
+	temp = mesg_pack[1]
+	mesg_pack[1] = mesg_pack[2]
+	mesg_pack[2] = temp
+	mesg_pack.append(convert_to_hex(argsize))
+	if argsize == 0:
+		crc = crc_generate(mesg_pack)
+		mesg_pack.append(crc)
+		return mesg_pack
+	else:
+		if argsize != len(args):
+			mesg_pack[4] = chr(0x15)
+			mesg_pack[5] = chr(0x00)
+			crc = crc_generate(mesg_pack)
+			mesg_pack.append(crc)
+			return mesg_pack
+		for arg in args:
+			mesg_pack.append(arg)
+		crc = crc_generate(mesg_pack)
+		mesg_pack.append(crc)
+		if DEBUG == True:
+			print "Final generated mesg_pack",mesg_pack
+		return mesg_pack
 #-----------------------------------------------------------------------
 #	CMD:0xb7 Operation: 5 Addr: 1
 #	Function Name: exe_cmd_go_home
@@ -592,13 +598,9 @@ def exe_cmd_set_current_step(mesg_pack):
 		send_resp(mesg_pack[:5],1,result_list)
 		return
 	except IOError:
+		result_list = []
 		mesg_pack[4] = chr(0x15)
 		result_list.append(chr(0xfc))
-		send_resp(mesg_pack[:5],1,result_list)
-		return
-	except struct.error:
-		mesg_pack[4] = chr(0x15)
-		result_list.append(chr(0xff))
 		send_resp(mesg_pack[:5],1,result_list)
 		return
 #-----------------------------------------------------------------------
@@ -744,6 +746,7 @@ def exe_cmd_motor_status(mesg_pack):
 		result_list.append(chr(0xfc))
 		send_resp(mesg_pack[:5],1,result_list)
 		return
+
 #-----------------------------------------------------------------------
 #  Description: remotely check the movement state. 1 byte will return
 #-----------------------------------------------------------------------
@@ -805,6 +808,7 @@ def exe_cmd_read_home_switch(mesg_pack):
 		result_list.append(chr(0xfe))
 		send_resp(mesg_pack[:5],1,result_list)
 		return
+
 #-----------------------------------------------------------------------
 #	CMD 0xb7 related commands process function
 #-----------------------------------------------------------------------
@@ -908,9 +912,6 @@ def exe_cmd_profilerwinch_flag(mesg_pack):
 				return
 			elif arg1 == 4:
 				exe_cmd_receive_file(mesg_pack)
-				return
-			elif arg1 == 5:
-				exe_cmd_profile_set(mesg_pack)
 				return
 			else:
 				mesg_pack[4] = chr(0x15)
@@ -1242,8 +1243,6 @@ if __name__ == '__main__':
 				  '91':exe_cmd_process_pass,
 				  'b7':exe_cmd_winch_op,
 				  'b8':exe_cmd_profilerwinch_flag,
-				  'b9':exe_cmd_configure_update,
-				  '0a':exe_cmd_expected_time_update,
 				  '34':exe_cmd_get_real_time,
 				  '35':exe_cmd_rv_sync_time,
 				  'f0':exe_cmd_reboot,

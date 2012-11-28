@@ -296,14 +296,16 @@ def read_step(SLAVE_ID=0):
 	enable_RS485()
 	step = -1
 	minimalmodbus.TIMEOUT = 0.05
-	minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
+	minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = False
 	try:
 		mod_con = minimalmodbus.Instrument(DEV_PORT,SLAVE_ID)
-		#mod_con.debug = True
-		mod_con.debug = False
+		mod_con.debug = True
+		#mod_con.debug = False
 		step = mod_con.read_long(REG8,FUNC4)
+		if step == 4294967295:
+			step = mod_con.read_long(REG8,FUNC4)
 		disable_RS485()
-		#print "succ",step
+		print "succ",step
 		logging.debug("read step:%d",step)
 		return step
 	except IOError:
@@ -326,19 +328,21 @@ def read_step(SLAVE_ID=0):
 #---------------------------------------------------------------------------
 #	Description: Send check motor status command to modbus slave indicated
 #	by SLAVE_ID. 
-#	0: motor stop 1: motor is moving down 2: motor is moving up
+#	0: motor #stop 1: motor is moving down 2: motor is moving up
 #	3: ramp up    4: ramp down
 #---------------------------------------------------------------------------
 def motor_status(SLAVE_ID=0):
 	enable_RS485()
 	status = -1
 	minimalmodbus.TIMEOUT = 0.05
-	minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
+	minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = False
 	try:
 		mod_con = minimalmodbus.Instrument(DEV_PORT,SLAVE_ID)
 		#mod_con.debug = True
 		mod_con.debug = False
 		status = mod_con.read_register(REG12,0,FUNC4)
+		if status == 4294967295:
+			status = mod_con.read_register(REG12,0,FUNC4)
 		disable_RS485()
 		return status
 	except IOError:
@@ -457,6 +461,7 @@ def read_home_switch(SLAVE_ID=0):
 		logging.debug("read home switch TypeError")
 		return switch_status
 
+#Already move this part to python_thread.py to avoid some NameErrror problem
 #def exe_cmd_read_home_switch(mesg_pack):
 #	try:
 #		result_list = []
@@ -499,10 +504,13 @@ if __name__ == "__main__":
 	#stop(1)
 	#go_home(1)
 	#go_step(1,100000)
-	read_step(1)
-	#motor_status(1)
-	movement_error(1)
+	#print get_position(66560)
+	print read_step(1)
+	#print m
+	#print get_position(m)
+	#print motor_status(1)
+	#movement_error(1)
 	#get_table()
 	#get_step(2)
 	#get_position(24000)
-	print read_home_switch(1)
+	#print read_home_switch(1)

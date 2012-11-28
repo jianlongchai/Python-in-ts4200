@@ -17,25 +17,25 @@ from python_motor import *
 #   Function Name: Thread for transfer file
 #	(will receive in current directory)
 #-------------------------------------------------------------
-class RZFile(threading.Thread):
-	''' The class for transfer file '''
-	def __init__(self,id,name):
-		threading.Thread.__init__(self)
-		self.id = id
-		self.name = name
-	def run(self):
-		threading.Thread.__init__(self)
-		try:
-			print "RUN Thread"
-			os.system("stty -F /dev/ttyS3 115200")
-			os.system("rz -y < /dev/ttyS3 > /dev/ttyS3")
-			os.system("stty -F /dev/ttyS3 9600")
-			return
-		except:
-			print "Error"
-			raise
-			return
-
+#class RZFile(threading.Thread):
+#	''' The class for transfer file '''
+#	def __init__(self,id,name):
+#		threading.Thread.__init__(self)
+#		self.id = id
+#		self.name = name
+#	def run(self):
+#		threading.Thread.__init__(self)
+#		try:
+#			print "RUN Thread"
+#			os.system("stty -F /dev/ttyS3 115200")
+#			os.system("rz -y < /dev/ttyS3 > /dev/ttyS3")
+#			os.system("stty -F /dev/ttyS3 9600")
+#			return
+#		except:
+#			print "Error"
+#			raise
+#			return
+#
 #----------------------------------------------------------------------
 #   Description: This function is used to get the current state
 #                CMD:0xb8  Arg: 0x00
@@ -55,9 +55,9 @@ def exe_cmd_check_state(mesg_pack):
 	return_list = []
 	expected_time_str = ','
 	expected_time = db_select_expected_time()
-	year, month, day, hour, min, sec = (str(expected_time[0]-2000), str(expected_time[1]), str(expected_time[2]),
+	year, month, day, hour, minu, sec = (str(expected_time[0]-2000), str(expected_time[1]), str(expected_time[2]),
 									    str(expected_time[3]), str(expected_time[4]), str(expected_time[5]))
-	expected_time_str = expected_time_str.join((year,month,day,hour,min,sec))
+	expected_time_str = expected_time_str.join((year,month,day,hour,minu,sec))
 	expected_time_struct = time .strptime(expected_time_str,"%y,%m,%d,%H,%M,%S")
 	calder_time = time.mktime(expected_time_struct)
 	wait_time = calder_time - time.time()
@@ -163,7 +163,7 @@ def exe_cmd_check_offset(mesg_pack):
 	except Exception:
 		print "error"
 		mesg_pack[4] = chr(0x15)
-		result_list.append(chr(200))
+		result_list.append(chr(0xf2))
 		send_resp(mesg_pack[:5],1,result_list)
 		return
 #--------------------------------------------------------------------------
@@ -176,14 +176,14 @@ def exe_cmd_next_profile(mesg_pack):
 		result_list = []
 		next_profile_time = db_select_expected_time()
 		year = next_profile_time[0] - 2000
-		month, day, hour,min,sec = (next_profile_time[1],next_profile_time[2],
+		month, day, hour,minu,sec = (next_profile_time[1],next_profile_time[2],
 									next_profile_time[3],next_profile_time[4],
 									next_profile_time[5])
 		result_list.append(struct.pack('>B',year))
 		result_list.append(struct.pack('>B',month))
 		result_list.append(struct.pack('>B',day))
 		result_list.append(struct.pack('>B',hour))
-		result_list.append(struct.pack('>B',min))
+		result_list.append(struct.pack('>B',minu))
 		result_list.append(struct.pack('>B',sec))
 		#print result_list
 		mesg_pack[4] = chr(0x06)
@@ -208,16 +208,16 @@ def exe_cmd_flag_position():
 	print "Here"	
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
-def exe_cmd_receive_file():
-	try:
-		thread2 = RZFile(1,"RZfiles")
-		thread2.setDaemon(True)
-		thread2.run()
-		thread2.join()
-		thread2.stop()
-		os.system("stty -F /dev/ttyS3 9600")
-	except:
-		return
+#def exe_cmd_receive_file():
+#	try:
+#		thread2 = RZFile(1,"RZfiles")
+#		thread2.setDaemon(True)
+#		thread2.run()
+#		thread2.join()
+#		thread2.stop()
+#		os.system("stty -F /dev/ttyS3 9600")
+#	except:
+#		return
 #--------------------------------------------------------------------------
 #	The thread class which is used to sync the clock
 #--------------------------------------------------------------------------
@@ -229,6 +229,7 @@ class SyncClockThread(threading.Thread):
 	def run(self,set_date,set_time):
 		threading.Thread.__init__(self)
 		os.system(set_date)
+		#print set_time	
 		os.system(set_time)
 		return 
 #--------------------------------------------------------------------------
@@ -243,13 +244,13 @@ def exe_cmd_rv_sync_time(mesg_pack):
 		time_list = []
 		result_list = []
 		#mesg_pack = ['!', '\x00', 'd', '\x00', '5', '\x07', '\x0c', '\n', '\x10', '\x01', '\x0e', '\x00', '(', '\x03']
-		year, month, day, wday, hour, min, sec = (struct.unpack('B',mesg_pack[6])[0], struct.unpack('B',mesg_pack[7])[0],
+		year, month, day, wday, hour, minu, sec = (struct.unpack('B',mesg_pack[6])[0], struct.unpack('B',mesg_pack[7])[0],
 												  struct.unpack('B',mesg_pack[8])[0], struct.unpack('B',mesg_pack[9])[0],
 												  struct.unpack('B',mesg_pack[10])[0], struct.unpack('B',mesg_pack[11])[0],
 												  struct.unpack('B',mesg_pack[12])[0])
-		year, month, day, wday, hour, min, sec =  str(year), str(month), str(day), str(wday),str(hour),str(min),str(sec)
+		year, month, day, wday, hour, minu, sec =  str(year), str(month), str(day), str(wday),str(hour),str(minu),str(sec)
 		date_list = [year,month,day]
-		time_list = [hour,min,sec]
+		time_list = [hour,minu,sec]
 		set_date = "date -s " + set_date.join(date_list)
 		set_time = "date -s " + set_time.join(time_list)
 		#print set_date,set_time
@@ -265,9 +266,95 @@ def exe_cmd_rv_sync_time(mesg_pack):
 		#os.system(set_time)
 		return
 	except Exception:
-		print "Error"
+		mesg_pack[4] = chr(0x15)
+		result_list.append(chr(0xf2))
+		send_resp(mesg_pack[:5],1,result_list)
 		return
+#----------------------------------------------------------------------------------
+#  Description: CMD:0xb8 Arg:0x05 Get the corresponding parameters from configure
+#----------------------------------------------------------------------------------
+def exe_cmd_profile_set(mesg_pack=[]):
+	result_list = []
+	try:
+		mesg_pack[4] = chr(0x06)
+		arg = struct.unpack('>B',mesg_pack[7])[0]
+		pars = db_select_lr(arg)
+		for par in struct.pack('>f',pars):
+			result_list.append(par)
+		#print result_list
+		send_resp(mesg_pack[:5],4,result_list)	
+	except (RuntimeError,TypeError):
+		mesg_pack[4] = chr(0x15)
+		result_list.append(chr(0xfe))
+		send_resp(mesg_pack[:5],1,result_list)
+		return
+	except (ZeroDivisionError,ValueError):
+		mesg_pack[4] = chr(0x15)
+		result_list.append(chr(0xfd))
+		send_resp(mesg_pack[:5],1,result_list)
+		return
+	except Exception:
+		mesg_pack[4] = chr(0x15)
+		result_list.append(chr(0xff))
+		send_resp(mesg_pack[:5],1,result_list)
+		return
+	
+def exe_cmd_configure_update(mesg_pack=[]):
+	result_list = ['\x01']
+	try:
+		db_id = struct.unpack('>B',mesg_pack[6])[0]
+		value = struct.unpack('>f',''.join(mesg_pack[7:11]))[0]
+		mesg_pack[4] = chr(0x06)
+		send_resp(mesg_pack[:5],1,result_list)
+		db_update_lr(db_id,value)
+	except (RuntimeError,TypeError):
+		mesg_pack[4] = chr(0x15)
+		result_list[0] = chr(0xfe)
+		send_resp(mesg_pack[:5],1,result_list)
+		return
+	except (ZeroDivisionError,ValueError):
+		mesg_pack[4] = chr(0x15)
+		result_list[0] = chr(0xfd)
+		send_resp(mesg_pack[:5],1,result_list)
+		return
+	except Exception:
+		print "Unexpected error:", sys.exc_info()[0]
+		mesg_pack[4] = chr(0x15)
+		result_list[0] = chr(0xff)
+		send_resp(mesg_pack[:5],1,result_list)
+		return
+def exe_cmd_expected_time_update(mesg_pack=[]):
+	result_list = ['\x01']
+	try:
+		year,month,day,hour,minu,sec = (2000+struct.unpack('>B',mesg_pack[6])[0],struct.unpack('>B',mesg_pack[7])[0],
+									    struct.unpack('>B',mesg_pack[8])[0],struct.unpack('>B',mesg_pack[9])[0],
+									    struct.unpack('>B',mesg_pack[10])[0],struct.unpack('>B',mesg_pack[11])[0])
+		mesg_pack[4] = chr(0x06)
+		send_resp(mesg_pack[:5],1,result_list)
+		db_update_expected_time(year,month,day,hour,minu,sec)
+		return
+	except (RuntimeError,TypeError):
+		mesg_pack[4] = chr(0x15)
+		result_list[0] = chr(0xfe)
+		send_resp(mesg_pack[:5],1,result_list)
+		return
+	except (ZeroDivisionError,ValueError):
+		mesg_pack[4] = chr(0x15)
+		result_list[0] = chr(0xfd)
+		send_resp(mesg_pack[:5],1,result_list)
+		return
+	#except Exception:
+	#	print "Unexpected error:", sys.exc_info()[0]
+	#	mesg_pack[4] = chr(0x15)
+	#	result_list[0] = chr(0xff)
+	#	send_resp(mesg_pack[:5],1,result_list)
+	#	return
+
+		
+			
+		
 if __name__ == "__main__":
 	#exe_cmd_rv_sync_time()
 	exe_cmd_check_offset(['\x21','\x00','\x64','\x46','\xb8','\x01','\x01','\x9c'])
 	exe_cmd_check_state(['\x21','\x00','\x64','\x44','\xb8','\x01','\x00','\x9f'])
+	#exe_cmd_profile_set(1)

@@ -100,7 +100,7 @@ def crc_check(mesg_pack=[]):
 #               return value to generate a respond message
 #------------------------------------------------------------------------
 def generate_resp_pack(mesg_pack=[],argsize=0,args=[]):
-	if DEBUG:
+	if DEBUG == True:
 		print "received par mesg_pack in generate",mesg_pack
 	mesg_pack[1] = struct.pack('>B',DEV_ID)
 	mesg_pack[3] = chr(ord(mesg_pack[3]) +1 )
@@ -123,7 +123,7 @@ def generate_resp_pack(mesg_pack=[],argsize=0,args=[]):
 			mesg_pack.append(arg)
 		crc = crc_generate(mesg_pack)
 		mesg_pack.append(crc)
-		if DEBUG:
+		if DEBUG == True:
 			print "Final generated mesg_pack",mesg_pack
 		return mesg_pack
 #------------------------------------------------------------------------
@@ -137,7 +137,7 @@ def send_resp(mesg_pack=[],argsize=0,args=[]):
 		ser = serial.Serial(port = None,baudrate = 9600,parity = serial.PARITY_NONE,
 							stopbits = serial.STOPBITS_ONE,bytesize = serial.EIGHTBITS)
 		ser.port = '/dev/ttyS3'
-		if not ser.isOpen():
+		if ser.isOpen() == False:
 			ser.open()
 		ser.flushOutput()
 		# convert the list to string to send
@@ -166,7 +166,7 @@ def exe_cmd_id(mesg_pack):
 		result_list.append(firmware)
 	result_list.append(struct.pack('>B',hardware))
 	result_list.append(chr(0x0))
-	if DEBUG:
+	if DEBUG == True:
 		print "mesg_pack cmd01",mesg_pack,"The result list",result_list
 	send_resp(mesg_pack[:5],6,result_list)
 	return 
@@ -196,6 +196,7 @@ def exe_cmd_ad(mesg_pack):
 		result_list.append(ad)
 	send_resp(mesg_pack[:5],2,result_list)
 	return
+
 #-----------------------------------------------------------------------
 #  Function Name: exe_cmd_temp
 #  Description: get the board temperature
@@ -592,13 +593,9 @@ def exe_cmd_set_current_step(mesg_pack):
 		send_resp(mesg_pack[:5],1,result_list)
 		return
 	except IOError:
+		result_list = []
 		mesg_pack[4] = chr(0x15)
 		result_list.append(chr(0xfc))
-		send_resp(mesg_pack[:5],1,result_list)
-		return
-	except struct.error:
-		mesg_pack[4] = chr(0x15)
-		result_list.append(chr(0xff))
 		send_resp(mesg_pack[:5],1,result_list)
 		return
 #-----------------------------------------------------------------------
@@ -744,6 +741,7 @@ def exe_cmd_motor_status(mesg_pack):
 		result_list.append(chr(0xfc))
 		send_resp(mesg_pack[:5],1,result_list)
 		return
+
 #-----------------------------------------------------------------------
 #  Description: remotely check the movement state. 1 byte will return
 #-----------------------------------------------------------------------
@@ -805,6 +803,7 @@ def exe_cmd_read_home_switch(mesg_pack):
 		result_list.append(chr(0xfe))
 		send_resp(mesg_pack[:5],1,result_list)
 		return
+
 #-----------------------------------------------------------------------
 #	CMD 0xb7 related commands process function
 #-----------------------------------------------------------------------
@@ -908,9 +907,6 @@ def exe_cmd_profilerwinch_flag(mesg_pack):
 				return
 			elif arg1 == 4:
 				exe_cmd_receive_file(mesg_pack)
-				return
-			elif arg1 == 5:
-				exe_cmd_profile_set(mesg_pack)
 				return
 			else:
 				mesg_pack[4] = chr(0x15)
@@ -1242,8 +1238,6 @@ if __name__ == '__main__':
 				  '91':exe_cmd_process_pass,
 				  'b7':exe_cmd_winch_op,
 				  'b8':exe_cmd_profilerwinch_flag,
-				  'b9':exe_cmd_configure_update,
-				  '0a':exe_cmd_expected_time_update,
 				  '34':exe_cmd_get_real_time,
 				  '35':exe_cmd_rv_sync_time,
 				  'f0':exe_cmd_reboot,
